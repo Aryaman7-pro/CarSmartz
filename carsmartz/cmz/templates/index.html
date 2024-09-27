@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CarSmartz - Car Price Prediction</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        h1, h5 {
+            text-align: center;
+            color: #2c3e50;
+        }
+        form {
+            max-width: 600px;
+            margin: auto;
+            padding: 20px;
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        label {
+            margin-top: 10px;
+            font-weight: bold;
+            color: #34495e;
+        }
+        select, input, button {
+            margin-top: 5px;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            transition: border-color 0.3s;
+        }
+        select:focus, input:focus, button:focus {
+            border-color: #3498db;
+            outline: none;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        #prediction {
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 20px;
+            color: #27ae60;
+        }
+    </style>
+</head>
+<body>
+
+<div>
+    <h1>Welcome to CarSmartz</h1>
+    <h5>This app predicts the price of a car you want to sell. Try filling the details below:</h5>
+
+    <form id="predictor-form">
+        <div>
+            <label><b>Select the company:</b></label>
+            <select id="company" name="company" required onchange="loadCarModels()">
+                <option value="">Select a company</option>
+                {% for company in companies %}
+                <option value="{{ company }}">{{ company }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label><b>Select the model:</b></label>
+            <select id="car_models" name="car_model" required>
+                <option value="">Select a model</option>
+                {% for model in car_models %}
+                <option value="{{ model }}">{{ model }}</option>
+                {% endfor %} 
+            </select>
+        </div>
+        <div>
+            <label><b>Select Year of Purchase:</b></label>
+            <select id="year" name="year" required>
+                <option value="">Select a year</option>
+                {% for year in years %}
+                <option value="{{ year }}">{{ year }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label><b>Select the Fuel Type:</b></label>
+            <select id="fuel_type" name="fuel_type" required>
+                <option value="">Select a fuel type</option>
+                {% for fuel in fuel_types %}
+                <option value="{{ fuel }}">{{ fuel }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label><b>Enter the Number of Kilometres that the car has travelled:</b></label>
+            <input type="number" id="kilo_driven" name="kilo_driven" 
+                   placeholder="Enter the kilometres driven" required 
+                   min="1" step="1">
+        </div>
+        <div>
+            <button type="button" onclick="send_data()">Predict Price</button>
+        </div>
+    </form>
+
+    <h4 id="prediction"></h4>
+</div>
+
+<script>
+    const modelsByCompany = JSON.parse(`{
+        {% for company, models in models_by_company.items %}
+        "{{ company }}": [
+            {% for model in models %}
+            "{{ model }}"{% if not forloop.last %},{% endif %}{% endfor %}
+        ]{% if not forloop.last %},{% endif %}{% endfor %}
+    }`);
+    function loadCarModels() {
+        const companySelect = document.getElementById('company');
+        const carModelSelect = document.getElementById('car_models');
+        const selectedCompany = companySelect.value;
+
+        // Clear existing options
+        carModelSelect.innerHTML = '<option value="">Select a model</option>'; 
+
+        if (modelsByCompany[selectedCompany]) {
+            const models = modelsByCompany[selectedCompany];
+
+            models.forEach(model => {
+                const newOption = document.createElement('option');
+                newOption.value = model;
+                newOption.textContent = model;
+                carModelSelect.appendChild(newOption);
+            });
+        }
+    }
+
+    function send_data() {
+        const form = document.querySelector('#predictor-form');
+        const fd = new FormData(form);
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/cmz/predict/', true);
+        document.getElementById('prediction').innerHTML = "Wait! Predicting Price.....";
+
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === XMLHttpRequest.DONE) {
+                if (xhr.status === 200) {
+                    const response = JSON.parse(xhr.responseText);
+                    document.getElementById('prediction').innerHTML = "Prediction: ₹" + response.prediction;
+                } else {
+                    document.getElementById('prediction').innerHTML = "Error predicting price.";
+                }
+            }
+        };
+
+        xhr.send(fd);
+    }
+</script>
+
+</body>
+</html>
