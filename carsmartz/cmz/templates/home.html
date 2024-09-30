@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Car Depreciation Calculator</title>
+    <style>
+        /* ... (keep the existing styles) ... */
+    </style>
+</head>
+<body>
+    <h1>General Car Depreciation Calculator</h1>
+    
+    <form id="depreciationForm">
+        <label for="initial_price">Initial Price ($):</label>
+        <input type="number" id="initial_price" name="initial_price" required min="1" step="0.01">
+        
+        <label for="num_months">Number of Months:</label>
+        <input type="number" id="num_months" name="num_months" required min="1" step="1">
+        
+        <input type="submit" value="Generate Depreciation Graph">
+    </form>
+
+    <div id="error"></div>
+    <img id="graph" alt="Depreciation Graph" style="display: none;">
+
+    <script>
+        document.getElementById('depreciationForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            var initialPrice = document.getElementById('initial_price').value;
+            var numMonths = document.getElementById('num_months').value;
+            var errorElement = document.getElementById('error');
+            var graphElement = document.getElementById('graph');
+            
+            // Clear previous error and graph
+            errorElement.textContent = '';
+            graphElement.style.display = 'none';
+
+            console.log('Sending request with:', { initialPrice, numMonths });
+
+            // Make the request to the API
+            fetch(`/cmz/depreciation-graph/?initial_price=${initialPrice}&num_months=${numMonths}`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Received data:', data);
+                    if (data.error) {
+                        errorElement.textContent = data.error;
+                    } else if (data.image) {
+                        // Display the image
+                        graphElement.src = 'data:image/png;base64,' + data.image;
+                        graphElement.style.display = 'block';
+                    } else {
+                        errorElement.textContent = 'Unexpected response from server';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    errorElement.textContent = 'An error occurred. Please try again.';
+                });
+        });
+    </script>
+</body>
+</html>

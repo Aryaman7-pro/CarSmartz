@@ -1,13 +1,77 @@
 import pickle
 import pandas as pd
 import numpy as np
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.response import Response
 from django.shortcuts import render
-from . serializers import CarDataSerializer
+from . serializers import CarDataSerializer, UserRegistrationSerializer, UserLoginSerializer
+from rest_framework import status
+from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
+from django.contrib.auth import authenticate
+from django.shortcuts import redirect
+import matplotlib.pyplot as plt
+from rest_framework_simplejwt.views import TokenRefreshView
+import io
+import base64
+import logging
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import AuthenticationFailed
+from django.conf import settings
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from django.contrib.auth import get_user_model
+User = get_user_model()
 # Load the model and data
 model = pickle.load(open('C:\\Users\\aryaman.kanwar\\CarSmartz\\StackedModel.pkl', 'rb'))
 car = pd.read_csv('C:\\Users\\aryaman.kanwar\\CarSmartz\\Cleaned_Data.csv')
+
+
+
+
+
+
+
+def get_valid_access_token_user(request):
+    access_token = request.COOKIES.get('access')
+    refresh_token = request.COOKIES.get('refresh')
+
+    if not access_token:
+        raise AuthenticationFailed('Access token is required')
+
+    try:
+        # Decode the access token to get the user's first name and last name
+        decoded_access_token = AccessToken(access_token)
+        email = decoded_access_token.get('email')  # Adjust the key based on your token's payload   # Adjust the key based on your token's payload
+
+        # Check if the user with the given first name and last name exists in the HeadTeamModel
+        if not User.objects.filter(email=email).exists():
+            raise AuthenticationFailed('User is not authorized')
+
+        return access_token
+
+    except Exception as e:
+        # If access token validation fails, check the refresh token
+        if not refresh_token:
+            raise AuthenticationFailed('Refresh token is required')
+
+        try:
+            refresh = RefreshToken(refresh_token)
+            new_access_token = str(refresh.access_token)
+
+            # Verify if the new access token corresponds to a valid HeadTeam user
+            decoded_new_access_token = AccessToken(new_access_token)
+            email = decoded_access_token.get('email')    # Adjust the key based on your token's payload
+
+            if not User.objects.filter(email=email).exists():
+                raise AuthenticationFailed('User is not authorized')
+
+            return new_access_token
+
+        except Exception as e:
+            raise AuthenticationFailed('Invalid refresh token')
+
+
+
+
 
 
 @api_view(['GET'])
@@ -55,3 +119,166 @@ def predict(request):
         return Response({"prediction": np.round(prediction[0], 2)}, status=200)
     else:
         return Response(serializer.errors, status=400)
+
+
+
+logger = logging.getLogger(__name__)
+
+@api_view(['GET'])
+def depreciation_graph(request):
+    try:
+        access_token = get_valid_access_token_user(request)
+        
+        if access_token != request.COOKIES.get('access'):
+            response = Response()
+            response.set_cookie(
+                'access', access_token,
+                httponly=True,
+                secure=True,
+                samesite='Strict'
+            )
+        else:
+            response = Response()
+
+    except AuthenticationFailed:
+        return Response({'error': "Unauthorized access. Token is invalid or expired."}, status=401)
+    if request.method == 'GET':
+        logger.info(f"Received request: {request.GET}")
+        logger.info(f"Headers: {request.headers}")
+
+        # Check if it's an AJAX request
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            logger.info("Processing AJAX request")
+            # This is an AJAX request, process it as before
+            initial_price = request.query_params.get('initial_price')
+            num_months = request.query_params.get('num_months')
+            
+            logger.info(f"Received parameters: initial_price={initial_price}, num_months={num_months}")
+
+            # Validate input
+            try:
+                initial_price = float(initial_price)
+                num_months = int(num_months)
+            except (TypeError, ValueError) as e:
+                logger.error(f"Invalid input: {str(e)}")
+                return Response(
+                    {"error": "Invalid input. Please provide valid initial_price and num_months."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            if initial_price <= 0 or num_months <= 0:
+                logger.error("Invalid input: Values must be positive")
+                return Response(
+                    {"error": "initial_price and num_months must be positive."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Generate data
+            months = np.arange(0, num_months)
+            
+            # Depreciation function (exponential decay)
+            def depreciation(t, initial_price, rate=0.005):
+                return initial_price * np.exp(-rate * t)
+            
+            prices = depreciation(months, initial_price)
+            
+            # Create the plot
+            plt.figure(figsize=(10, 6))
+            plt.plot(months, prices)
+            plt.title(f'Car Depreciation Over {num_months} Months')
+            plt.xlabel('Months')
+            plt.ylabel('Price (Rs)')
+            plt.grid(True)
+            
+            # Convert plot to image
+            buf = io.BytesIO()
+            plt.savefig(buf, format='png')
+            buf.seek(0)
+            image = base64.b64encode(buf.getvalue()).decode('utf-8')
+            
+            # Clear the current figure
+            plt.clf()
+            
+            logger.info("Successfully generated graph")
+            return Response({
+                'image': image,
+                'data': {
+                    'months': months.tolist(),
+                    'prices': prices.tolist()
+                }
+            })
+        else:
+            logger.info("Rendering HTML template")
+            # This is a regular GET request, render the HTML template
+            return render(request, 'home.html')
+
+
+@api_view(['GET','POST'])
+def user_registration(request):
+    if request.method == 'POST':
+        serializer = UserRegistrationSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+            }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    return render(request, 'register.html')
+
+
+
+@api_view(['GET', 'POST'])
+def user_login(request):
+    if request.method == 'POST':
+        email = request.data.get('email')
+        password = request.data.get('password')
+        
+        logger.debug(f"Login attempt for email: {email}")
+
+        try:
+            user = User.objects.get(email=email)
+            logger.debug(f"User found: {user}")
+        except User.DoesNotExist:
+            logger.warning(f"User with email {email} does not exist")
+            return Response({'error': 'User does not exist'}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        user = authenticate(request, email=email, password=password)
+        print(user)
+        
+        if user is not None:
+            logger.info(f"User {email} authenticated successfully")
+            refresh = RefreshToken.for_user(user)
+            logger.debug(f"Refresh token generated: {refresh}")
+            logger.debug(f"Access token generated: {refresh.access_token}")
+
+            response = Response({
+                'message': 'Login successful',
+                'user_id': user.id,
+                'email': user.email
+            }, status=status.HTTP_200_OK)
+
+            # Set cookies
+            response.set_cookie(
+                'access',
+                str(refresh.access_token),
+                max_age=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'].total_seconds(),
+                httponly=True,
+                samesite='Lax'
+            )
+            response.set_cookie(
+                'refresh',
+                str(refresh),
+                max_age=settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'].total_seconds(),
+                httponly=True,
+                samesite='Lax'
+            )
+
+            return response
+             
+        else:
+            logger.warning(f"Authentication failed for user {email}")
+            return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+    
+    return render(request, 'login.html')

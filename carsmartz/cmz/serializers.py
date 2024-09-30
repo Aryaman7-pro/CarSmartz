@@ -1,5 +1,9 @@
 from rest_framework import serializers
 import pandas as pd
+from .models import CustomUser
+
+
+
 class CarDataSerializer(serializers.Serializer):
     company = serializers.CharField(max_length=100)  # Company name
     car_model = serializers.CharField(max_length=100)  # Car model
@@ -14,3 +18,20 @@ class CarDataSerializer(serializers.Serializer):
         if data['year'] > current_year:
             raise serializers.ValidationError("Year cannot be in the future.")
         return data
+
+
+
+class UserRegistrationSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = CustomUser
+        fields = ('email', 'name', 'phone_number', 'password')
+
+    def create(self, validated_data):
+        user = CustomUser.objects.create_user(**validated_data)
+        return user
+
+class UserLoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField()
