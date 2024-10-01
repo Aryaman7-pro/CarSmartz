@@ -1,6 +1,6 @@
 from rest_framework import serializers
 import pandas as pd
-from .models import CustomUser
+from .models import CustomUser,Car
 
 
 
@@ -35,3 +35,9 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 class UserLoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField()
+
+
+class CarSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Car
+        fields = '__all__'

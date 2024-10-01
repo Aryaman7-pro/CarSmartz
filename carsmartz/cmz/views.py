@@ -4,7 +4,8 @@ import numpy as np
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.response import Response
 from django.shortcuts import render
-from . serializers import CarDataSerializer, UserRegistrationSerializer, UserLoginSerializer
+from . serializers import CarDataSerializer, UserRegistrationSerializer, UserLoginSerializer, CarSerializer
+from .models import Car
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from django.contrib.auth import authenticate
@@ -16,18 +17,22 @@ import base64
 import logging
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.pagination import PageNumberPagination
 from django.conf import settings
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.contrib.auth import get_user_model
+from django.contrib.auth import logout
 User = get_user_model()
 # Load the model and data
 model = pickle.load(open('C:\\Users\\aryaman.kanwar\\CarSmartz\\StackedModel.pkl', 'rb'))
 car = pd.read_csv('C:\\Users\\aryaman.kanwar\\CarSmartz\\Cleaned_Data.csv')
 
+logger = logging.getLogger(__name__)
 
-
-
-
+class SmallPageNumberPagination(PageNumberPagination):
+    page_size = 3  # Set default page size to 3
+    page_size_query_param = 'page_size'
+    max_page_size = 10
 
 
 def get_valid_access_token_user(request):
@@ -70,12 +75,24 @@ def get_valid_access_token_user(request):
             raise AuthenticationFailed('Invalid refresh token')
 
 
-
-
-
-
 @api_view(['GET'])
 def index(request):
+    try:
+        access_token = get_valid_access_token_user(request)
+        
+        if access_token != request.COOKIES.get('access'):
+            response = Response()
+            response.set_cookie(
+                'access', access_token,
+                httponly=True,
+                secure=True,
+                samesite='Strict'
+            )
+        else:
+            response = Response()
+
+    except AuthenticationFailed:
+        return Response({'error': "Unauthorized access. Token is invalid or expired."}, status=401)
     companies = sorted(car['company'].unique())
     car_models = sorted(car['name'].unique())
     years = sorted(car['year'].unique(), reverse=True)
@@ -96,8 +113,27 @@ def index(request):
         'fuel_types': fuel_types
     })
 
+
+
+
 @api_view(['POST'])
 def predict(request):
+    try:
+        access_token = get_valid_access_token_user(request)
+        
+        if access_token != request.COOKIES.get('access'):
+            response = Response()
+            response.set_cookie(
+                'access', access_token,
+                httponly=True,
+                secure=True,
+                samesite='Strict'
+            )
+        else:
+            response = Response()
+
+    except AuthenticationFailed:
+        return Response({'error': "Unauthorized access. Token is invalid or expired."}, status=401)
     serializer = CarDataSerializer(data=request.data)
     
     if serializer.is_valid():
@@ -122,7 +158,6 @@ def predict(request):
 
 
 
-logger = logging.getLogger(__name__)
 
 @api_view(['GET'])
 def depreciation_graph(request):
@@ -183,9 +218,9 @@ def depreciation_graph(request):
             prices = depreciation(months, initial_price)
             
             # Create the plot
-            plt.figure(figsize=(10, 6))
+            plt.figure(figsize=(8, 4))
             plt.plot(months, prices)
-            plt.title(f'Car Depreciation Over {num_months} Months')
+            plt.title(f'Car Price Depreciation Over {num_months} Months')
             plt.xlabel('Months')
             plt.ylabel('Price (Rs)')
             plt.grid(True)
@@ -245,7 +280,6 @@ def user_login(request):
             return Response({'error': 'User does not exist'}, status=status.HTTP_401_UNAUTHORIZED)
         
         user = authenticate(request, email=email, password=password)
-        print(user)
         
         if user is not None:
             logger.info(f"User {email} authenticated successfully")
@@ -265,14 +299,16 @@ def user_login(request):
                 str(refresh.access_token),
                 max_age=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'].total_seconds(),
                 httponly=True,
-                samesite='Lax'
+                samesite='Lax',
+                path='/'
             )
             response.set_cookie(
                 'refresh',
                 str(refresh),
                 max_age=settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'].total_seconds(),
                 httponly=True,
-                samesite='Lax'
+                samesite='Lax',
+                path='/'
             )
 
             return response
@@ -282,3 +318,78 @@ def user_login(request):
             return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
     
     return render(request, 'login.html')
+
+
+def logout_view(request):
+    logout(request)  # Log out the user
+    response = redirect('login')  # Redirect to the login page or home page
+    response.delete_cookie('access', path='/')  # Clear the access token cookie
+    response.delete_cookie('refresh', path='/')  # Clear the refresh token cookie
+    return response
+
+
+@api_view(['POST'])
+def create_car(request):
+    try:
+        access_token = get_valid_access_token_user(request)
+        
+        if access_token != request.COOKIES.get('access'):
+            response = Response()
+            response.set_cookie(
+                'access', access_token,
+                httponly=True,
+                secure=True,
+                samesite='Strict'
+            )
+        else:
+            response = Response()
+
+    except AuthenticationFailed:
+        return Response({'error': "Unauthorized access. Token is invalid or expired."}, status=401)
+    serializer = CarSerializer(data=request.data)
+    print(serializer)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    else:
+        print(serializer.errors)  # Add this line to debug
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+
+
+
+@api_view(['GET'])
+def get_all_cars(request):
+    try:
+        access_token = get_valid_access_token_user(request)
+
+        if access_token != request.COOKIES.get('access'):
+            response = Response()
+            response.set_cookie(
+                'access', access_token,
+                httponly=True,
+                secure=True,
+                samesite='Strict'
+            )
+        else:
+            response = Response()
+
+        cars = Car.objects.all()  # Fetch all car records
+
+        # Apply pagination
+        paginator = SmallPageNumberPagination()
+        paginated_cars = paginator.paginate_queryset(cars, request)
+
+        serializer = CarSerializer(paginated_cars, many=True)
+
+        # Render the paginated data in the HTML template
+        return render(request, 'buy.html', {
+            'cars': serializer.data,
+            'paginator': paginator,
+            'page': paginator.page,  
+            'page_count': paginator.page.paginator.num_pages   # Pass the total number of cars for pagination info
+        })
+
+    except AuthenticationFailed:
+        return Response({'error': "Unauthorized access. Token is invalid or expired."}, status=401)

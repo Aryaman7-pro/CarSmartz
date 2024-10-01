@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CarSmartz - Available Cars for Sale</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --background-color: #f4f4f4;
+            --text-color: #333;
+            --card-background: #ffffff;
+            --card-border: #e0e0e0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--background-color);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+        }
+
+        h5 {
+            color: #666;
+            font-weight: normal;
+            font-size: 1.1rem;
+        }
+
+        .car-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .car-item {
+            background-color: var(--card-background);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 20px;
+            transition: box-shadow 0.3s, transform 0.3s;
+        }
+
+        .car-item:hover {
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            transform: translateY(-5px);
+        }
+
+        .car-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        .car-details {
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            font-weight: bold;
+            text-decoration: none;
+            color: #fff;
+            background-color: var(--primary-color);
+            transition: background-color 0.3s, transform 0.3s;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 30px;
+        }
+
+        .pagination .btn {
+            padding: 8px 15px;
+        }
+
+        .pagination span {
+            margin: 0 10px;
+            font-weight: bold;
+            color: #666;
+        }
+
+        @media (max-width: 600px) {
+            .car-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .button-container {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Available Cars for Sale</h1>
+            <h5>Browse through our list of cars and make a choice!</h5>
+        </header>
+
+        <div class="car-grid" id="car-list">
+            {% for car in cars %}
+                <div class="car-item">
+                    <div class="car-title">{{ car.car_model }} ({{ car.year }})</div>
+                    <div class="car-details">Fuel Type: {{ car.fuel_type }}</div>
+                    <div class="car-details">Kilometers Driven: {{ car.kilo_driven }}</div>
+                    <div class="car-details">Predicted Price: ₹{{ car.predicted_price|floatformat:2 }}</div>
+                </div>
+            {% empty %}
+                <p>No cars available at the moment.</p>
+            {% endfor %}
+        </div>
+
+        <div class="pagination">
+            {% if page.has_previous %}
+                <a href="?page={{ page.previous_page_number }}" class="btn">Previous</a>
+            {% endif %}
+            <span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+            {% if page.has_next %}
+                <a href="?page={{ page.next_page_number }}" class="btn">Next</a>
+            {% endif %}
+        </div>
+
+        <div class="button-container">
+            <button id="predictPriceButton" class="btn">Predict Car Price</button>
+            <button id="buyCarButton" class="btn">Buy a Car</button>
+            <button onclick="window.location.href='/cmz/depreciation-graph/'" class="btn">Back to Home</button>
+            <button id="logoutButton" class="btn">Logout</button>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('predictPriceButton').addEventListener('click', function() {
+            window.location.href = '/cmz/api';
+        });
+
+        document.getElementById('buyCarButton').addEventListener('click', function() {
+            window.location.href = '/cmz/api/cars/buy/';
+        });
+
+        document.getElementById('logoutButton').addEventListener('click', function() {
+            window.location.href = '/cmz/logout/';
+        });
+    </script>
+</body>
+</html>

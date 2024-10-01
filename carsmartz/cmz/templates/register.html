@@ -6,7 +6,7 @@
     <title>Register</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Arial', sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -17,8 +17,15 @@
         .container {
             background-color: white;
             padding: 2rem;
-            border-radius: 5px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 1.5rem;
         }
         form {
             display: flex;
@@ -26,17 +33,25 @@
         }
         input {
             margin-bottom: 1rem;
-            padding: 0.5rem;
+            padding: 0.75rem;
             border: 1px solid #ccc;
-            border-radius: 3px;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        input:focus {
+            border-color: #007bff;
+            outline: none;
         }
         button {
             background-color: #007bff;
             color: white;
             border: none;
-            padding: 0.5rem;
-            border-radius: 3px;
+            padding: 0.75rem;
+            border-radius: 5px;
             cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
         }
         button:hover {
             background-color: #0056b3;
@@ -49,9 +64,23 @@
             color: #007bff;
             text-decoration: none;
             font-weight: bold;
+            transition: color 0.3s;
         }
         .login-link a:hover {
-            text-decoration: underline;
+            color: #0056b3;
+        }
+        .error-message {
+            color: red;
+            text-align: center;
+            margin-top: 1rem;
+        }
+        @media (max-width: 480px) {
+            .container {
+                padding: 1.5rem;
+            }
+            h2 {
+                font-size: 24px;
+            }
         }
     </style>
 </head>
@@ -64,6 +93,7 @@
             <input type="tel" id="phoneNumber" placeholder="Phone Number" required>
             <input type="password" id="password" placeholder="Password" required>
             <button type="button" id="submitBtn">Register</button>
+            <div class="error-message" id="error-message" style="display:none;"></div>
         </form>
         <div class="login-link">
             <p>Already have an account? <a href="/cmz/login">Login</a></p>
@@ -77,6 +107,9 @@
             const name = document.getElementById('name').value;
             const phoneNumber = document.getElementById('phoneNumber').value;
             const password = document.getElementById('password').value;
+            const errorMessage = document.getElementById('error-message');
+
+            errorMessage.style.display = 'none'; // Reset error message
 
             try {
                 const response = await fetch('/cmz/register/', {
@@ -94,11 +127,13 @@
                     alert('Registration successful!');
                     // Redirect to login page or handle as needed
                 } else {
-                    alert(`Registration failed: ${JSON.stringify(data)}`);
+                    errorMessage.textContent = `Registration failed: ${JSON.stringify(data)}`;
+                    errorMessage.style.display = 'block';
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('An error occurred during registration.');
+                errorMessage.textContent = 'An error occurred during registration.';
+                errorMessage.style.display = 'block';
             }
         });
 

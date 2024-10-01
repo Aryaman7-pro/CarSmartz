@@ -40,3 +40,16 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+    
+
+
+class Car(models.Model):
+    company = models.CharField(max_length=100)
+    car_model = models.CharField(max_length=100)
+    year = models.IntegerField()
+    fuel_type = models.CharField(max_length=50)
+    kilo_driven = models.PositiveIntegerField()
+    predicted_price = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.company} {self.car_model} ({self.year})"

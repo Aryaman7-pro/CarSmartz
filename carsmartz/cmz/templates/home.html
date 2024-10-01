@@ -3,68 +3,243 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Car Depreciation Calculator</title>
+    <title>CarSmartz - Car Depreciation Calculator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
-        /* ... (keep the existing styles) ... */
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --background-color: #f4f4f4;
+            --text-color: #333;
+            --error-color: #e74c3c;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--background-color);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 30px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: #fff;
+        }
+
+        .btn-secondary {
+            background-color: var(--secondary-color);
+            color: #fff;
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .error {
+            color: var(--error-color);
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+            font-style: italic;
+        }
+
+        .graph {
+            display: none;
+            max-width: 100%;
+            height: auto;
+            margin-top: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .btn {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+
+            .button-container {
+                flex-direction: column;
+            }
+        }
     </style>
 </head>
 <body>
-    <h1>General Car Depreciation Calculator</h1>
-    
-    <form id="depreciationForm">
-        <label for="initial_price">Initial Price ($):</label>
-        <input type="number" id="initial_price" name="initial_price" required min="1" step="0.01">
-        
-        <label for="num_months">Number of Months:</label>
-        <input type="number" id="num_months" name="num_months" required min="1" step="1">
-        
-        <input type="submit" value="Generate Depreciation Graph">
-    </form>
+    <header>
+        <h1>Welcome to CarSmartz</h1>
+        <p>Predict the general depreciation of a car's price over time</p>
+    </header>
 
-    <div id="error"></div>
-    <img id="graph" alt="Depreciation Graph" style="display: none;">
+    <main class="container">
+        <form id="depreciationForm">
+            <div class="form-group">
+                <label for="initial_price">Initial Price ($):</label>
+                <input type="number" id="initial_price" name="initial_price" required min="1" step="0.01" placeholder="Enter initial price">
+            </div>
+
+            <div class="form-group">
+                <label for="num_months">Number of Months:</label>
+                <input type="number" id="num_months" name="num_months" required min="1" step="1" placeholder="Enter number of months">
+            </div>
+
+            <button type="submit" class="btn btn-primary">Generate Depreciation Graph</button>
+        </form>
+
+        <div id="error" class="error" role="alert"></div>
+        <div id="loadingMessage" class="loading" aria-live="polite">Generating graph...</div>
+        <img id="graph" alt="Depreciation Graph" class="graph">
+
+        <div class="button-container">
+            <button id="predictPriceButton" class="btn btn-secondary">Sell Your Car</button>
+            <button id="buyCarButton" class="btn btn-secondary">Buy a Car</button>
+        </div>
+    </main>
+
+    <footer>
+        <button id="logoutButton" class="btn btn-outline">Logout</button>
+    </footer>
 
     <script>
-        document.getElementById('depreciationForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            var initialPrice = document.getElementById('initial_price').value;
-            var numMonths = document.getElementById('num_months').value;
-            var errorElement = document.getElementById('error');
-            var graphElement = document.getElementById('graph');
-            
-            // Clear previous error and graph
-            errorElement.textContent = '';
-            graphElement.style.display = 'none';
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('depreciationForm');
+            const errorElement = document.getElementById('error');
+            const graphElement = document.getElementById('graph');
+            const loadingMessage = document.getElementById('loadingMessage');
+            const predictPriceButton = document.getElementById('predictPriceButton');
+            const buyCarButton = document.getElementById('buyCarButton');
+            const logoutButton = document.getElementById('logoutButton');
 
-            console.log('Sending request with:', { initialPrice, numMonths });
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
 
-            // Make the request to the API
-            fetch(`/cmz/depreciation-graph/?initial_price=${initialPrice}&num_months=${numMonths}`, {
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-                .then(response => {
-                    console.log('Response status:', response.status);
-                    return response.json();
-                })
-                .then(data => {
-                    console.log('Received data:', data);
+                const initialPrice = document.getElementById('initial_price').value;
+                const numMonths = document.getElementById('num_months').value;
+
+                errorElement.textContent = '';
+                graphElement.style.display = 'none';
+                loadingMessage.style.display = 'block';
+
+                try {
+                    const response = await fetch(`/cmz/depreciation-graph/?initial_price=${initialPrice}&num_months=${numMonths}`, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+
+                    const data = await response.json();
+
+                    loadingMessage.style.display = 'none';
+
                     if (data.error) {
                         errorElement.textContent = data.error;
                     } else if (data.image) {
-                        // Display the image
                         graphElement.src = 'data:image/png;base64,' + data.image;
                         graphElement.style.display = 'block';
                     } else {
                         errorElement.textContent = 'Unexpected response from server';
                     }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
+                } catch (error) {
+                    loadingMessage.style.display = 'none';
                     errorElement.textContent = 'An error occurred. Please try again.';
-                });
+                    console.error('Error:', error);
+                }
+            });
+
+            predictPriceButton.addEventListener('click', () => {
+                window.location.href = '/cmz/api';
+            });
+
+            buyCarButton.addEventListener('click', () => {
+                window.location.href = '/cmz/api/cars/buy/';
+            });
+
+            logoutButton.addEventListener('click', () => {
+                window.location.href = '/cmz/logout/';
+            });
         });
     </script>
 </body>

@@ -2,170 +2,293 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CarSmartz - Car Price Prediction</title>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: Arial, sans-serif;
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --background-color: #f4f4f4;
+            --text-color: #333;
+            --error-color: #e74c3c;
+        }
+
+        * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            background-color: #f4f4f4;
-            color: #333;
         }
-        h1, h5 {
-            text-align: center;
-            color: #2c3e50;
-        }
-        form {
-            max-width: 600px;
-            margin: auto;
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--background-color);
             padding: 20px;
-            background: #ffffff;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 30px;
+            background-color: #fff;
             border-radius: 8px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        h5 {
+            color: #666;
+            font-weight: normal;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
         label {
-            margin-top: 10px;
+            display: block;
+            margin-bottom: 5px;
             font-weight: bold;
-            color: #34495e;
+            color: #555;
         }
-        select, input, button {
-            margin-top: 5px;
+
+        select, input {
+            width: 100%;
             padding: 10px;
-            font-size: 16px;
-            border: 1px solid #bdc3c7;
+            border: 1px solid #ddd;
             border-radius: 4px;
-            transition: border-color 0.3s;
+            font-size: 16px;
         }
-        select:focus, input:focus, button:focus {
-            border-color: #3498db;
+
+        select:focus, input:focus {
             outline: none;
+            border-color: var(--primary-color);
         }
-        button {
-            background-color: #3498db;
-            color: white;
+
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
             border: none;
+            border-radius: 4px;
+            font-size: 16px;
             cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
         }
-        button:hover {
-            background-color: #2980b9;
+
+        .btn:hover {
+            transform: translateY(-2px);
         }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: #fff;
+        }
+
+        .btn-secondary {
+            background-color: var(--secondary-color);
+            color: #fff;
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+
         #prediction {
             text-align: center;
             font-size: 24px;
             font-weight: bold;
             margin-top: 20px;
-            color: #27ae60;
+            color: var(--secondary-color);
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+
+            .button-container {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                margin-bottom: 10px;
+            }
         }
     </style>
 </head>
 <body>
+    <div class="container">
+        <header>
+            <h1>Welcome to CarSmartz</h1>
+            <h5>Predict the price of a car you want to sell. Fill in the details below:</h5>
+        </header>
 
-<div>
-    <h1>Welcome to CarSmartz</h1>
-    <h5>This app predicts the price of a car you want to sell. Try filling the details below:</h5>
+        <form id="predictor-form">
+            <div class="form-group">
+                <label for="company">Select the company:</label>
+                <select id="company" name="company" required onchange="loadCarModels()">
+                    <option value="">Select a company</option>
+                    {% for company in companies %}
+                    <option value="{{ company }}">{{ company }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-    <form id="predictor-form">
-        <div>
-            <label><b>Select the company:</b></label>
-            <select id="company" name="company" required onchange="loadCarModels()">
-                <option value="">Select a company</option>
-                {% for company in companies %}
-                <option value="{{ company }}">{{ company }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div>
-            <label><b>Select the model:</b></label>
-            <select id="car_models" name="car_model" required>
-                <option value="">Select a model</option>
-                {% for model in car_models %}
-                <option value="{{ model }}">{{ model }}</option>
-                {% endfor %} 
-            </select>
-        </div>
-        <div>
-            <label><b>Select Year of Purchase:</b></label>
-            <select id="year" name="year" required>
-                <option value="">Select a year</option>
-                {% for year in years %}
-                <option value="{{ year }}">{{ year }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div>
-            <label><b>Select the Fuel Type:</b></label>
-            <select id="fuel_type" name="fuel_type" required>
-                <option value="">Select a fuel type</option>
-                {% for fuel in fuel_types %}
-                <option value="{{ fuel }}">{{ fuel }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div>
-            <label><b>Enter the Number of Kilometres that the car has travelled:</b></label>
-            <input type="number" id="kilo_driven" name="kilo_driven" 
-                   placeholder="Enter the kilometres driven" required 
-                   min="1" step="1">
-        </div>
-        <div>
-            <button type="button" onclick="send_data()">Predict Price</button>
-        </div>
-    </form>
+            <div class="form-group">
+                <label for="car_models">Select the model:</label>
+                <select id="car_models" name="car_model" required>
+                    <option value="">Select a model</option>
+                </select>
+            </div>
 
-    <h4 id="prediction"></h4>
-</div>
+            <div class="form-group">
+                <label for="year">Select Year of Purchase:</label>
+                <select id="year" name="year" required>
+                    <option value="">Select a year</option>
+                    {% for year in years %}
+                    <option value="{{ year }}">{{ year }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-<script>
-    const modelsByCompany = JSON.parse(`{
-        {% for company, models in models_by_company.items %}
-        "{{ company }}": [
-            {% for model in models %}
-            "{{ model }}"{% if not forloop.last %},{% endif %}{% endfor %}
-        ]{% if not forloop.last %},{% endif %}{% endfor %}
-    }`);
-    function loadCarModels() {
-        const companySelect = document.getElementById('company');
-        const carModelSelect = document.getElementById('car_models');
-        const selectedCompany = companySelect.value;
+            <div class="form-group">
+                <label for="fuel_type">Select the Fuel Type:</label>
+                <select id="fuel_type" name="fuel_type" required>
+                    <option value="">Select a fuel type</option>
+                    {% for fuel in fuel_types %}
+                    <option value="{{ fuel }}">{{ fuel }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-        // Clear existing options
-        carModelSelect.innerHTML = '<option value="">Select a model</option>'; 
+            <div class="form-group">
+                <label for="kilo_driven">Enter the Number of Kilometres that the car has travelled:</label>
+                <input type="number" id="kilo_driven" name="kilo_driven" 
+                       placeholder="Enter the kilometres driven" required 
+                       min="1" step="1">
+            </div>
 
-        if (modelsByCompany[selectedCompany]) {
-            const models = modelsByCompany[selectedCompany];
+            <input type="hidden" id="predicted_price" name="predicted_price" value="">
 
-            models.forEach(model => {
-                const newOption = document.createElement('option');
-                newOption.value = model;
-                newOption.textContent = model;
-                carModelSelect.appendChild(newOption);
+            <div class="button-container">
+                <button type="button" class="btn btn-primary" onclick="send_data()">Predict Price</button>
+                <button type="button" class="btn btn-secondary" onclick="save_car()">Save Car Info</button>
+                <button type="button" class="btn btn-outline" onclick="window.location.href='/cmz/api/cars/buy/'">Buy a Car</button>
+            </div>
+        </form>
+
+        <div id="prediction"></div>
+
+        <footer>
+            <button class="btn btn-outline" onclick="window.location.href='/cmz/depreciation-graph/'">Back to Home</button>
+            <button id="logoutButton" class="btn btn-outline">Logout</button>
+        </footer>
+    </div>
+
+    <script>
+        const modelsByCompany = JSON.parse(`{
+            {% for company, models in models_by_company.items %}
+            "{{ company }}": [
+                {% for model in models %}
+                "{{ model }}"{% if not forloop.last %},{% endif %}{% endfor %}
+            ]{% if not forloop.last %},{% endif %}{% endfor %}
+        }`);
+
+        function loadCarModels() {
+            const companySelect = document.getElementById('company');
+            const carModelSelect = document.getElementById('car_models');
+            const selectedCompany = companySelect.value;
+
+            carModelSelect.innerHTML = '<option value="">Select a model</option>';
+
+            if (modelsByCompany[selectedCompany]) {
+                const models = modelsByCompany[selectedCompany];
+                models.forEach(model => {
+                    const newOption = document.createElement('option');
+                    newOption.value = model;
+                    newOption.textContent = model;
+                    carModelSelect.appendChild(newOption);
+                });
+            }
+        }
+
+        function send_data() {
+            const form = document.querySelector('#predictor-form');
+            const fd = new FormData(form);
+            const prediction = document.getElementById('prediction');
+            const root = getComputedStyle(document.documentElement);
+            const secondaryColor = root.getPropertyValue('--secondary-color').trim();
+            const errorColor = root.getPropertyValue('--error-color').trim();
+
+            prediction.innerHTML = "Wait! Predicting Price.....";
+            prediction.style.color = '#666';
+
+            fetch('/cmz/predict/', {
+                method: 'POST',
+                body: fd
+            })
+            .then(response => response.json())
+            .then(data => {
+                prediction.innerHTML = "Prediction: ₹" + data.prediction;
+                prediction.style.color = secondaryColor; // Use the CSS variable
+                document.getElementById('predicted_price').value = data.prediction;
+            })
+            .catch(error => {
+                prediction.innerHTML = "Error predicting price.";
+                prediction.style.color = errorColor; // Use the CSS variable
+                console.error('Error:', error);
             });
         }
-    }
 
-    function send_data() {
-        const form = document.querySelector('#predictor-form');
-        const fd = new FormData(form);
+        function save_car() {
+            const form = document.querySelector('#predictor-form');
+            const fd = new FormData(form);
 
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', '/cmz/predict/', true);
-        document.getElementById('prediction').innerHTML = "Wait! Predicting Price.....";
-
-        xhr.onreadystatechange = function() {
-            if (xhr.readyState === XMLHttpRequest.DONE) {
-                if (xhr.status === 200) {
-                    const response = JSON.parse(xhr.responseText);
-                    document.getElementById('prediction').innerHTML = "Prediction: ₹" + response.prediction;
+            fetch('/cmz/api/cars/sell/', {
+                method: 'POST',
+                body: fd
+            })
+            .then(response => {
+                if (response.status === 201) {
+                    alert("Car information saved successfully!");
                 } else {
-                    document.getElementById('prediction').innerHTML = "Error predicting price.";
+                    throw new Error('Failed to save car information');
                 }
-            }
-        };
+            })
+            .catch(error => {
+                alert("Error saving car information.");
+                console.error('Error:', error);
+            });
+        }
 
-        xhr.send(fd);
-    }
-</script>
-
+        document.getElementById('logoutButton').addEventListener('click', function() {
+            window.location.href = '/cmz/logout/';
+        });
+    </script>
 </body>
 </html>
