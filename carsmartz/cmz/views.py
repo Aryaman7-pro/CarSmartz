@@ -1,6 +1,7 @@
 import pickle
 import pandas as pd
 import numpy as np
+import plotly.graph_objects as go
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.response import Response
 from django.shortcuts import render
@@ -220,7 +221,7 @@ def depreciation_graph(request):
             # Create the plot
             plt.figure(figsize=(8, 4))
             plt.plot(months, prices)
-            plt.title(f'Car Price Depreciation Over {num_months} Months')
+            plt.title(f'General Car Price Depreciation Over {num_months} Months')
             plt.xlabel('Months')
             plt.ylabel('Price (Rs)')
             plt.grid(True)
@@ -246,6 +247,7 @@ def depreciation_graph(request):
             logger.info("Rendering HTML template")
             # This is a regular GET request, render the HTML template
             return render(request, 'home.html')
+
 
 
 @api_view(['GET','POST'])
@@ -355,8 +357,6 @@ def create_car(request):
         print(serializer.errors)  # Add this line to debug
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-
-
 
 
 @api_view(['GET'])
