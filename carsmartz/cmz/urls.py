@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import index, predict, depreciation_graph, user_registration, user_login, TokenRefreshView, logout_view, create_car, get_all_cars
+from .views import index, predict, depreciation_graph, user_registration, user_login, TokenRefreshView, logout_view, create_car, get_all_cars,car_detail
 from rest_framework_simplejwt.views import TokenRefreshView
 urlpatterns = [
     path('api/', index, name='index'),
@@ -11,4 +11,5 @@ urlpatterns = [
     path('logout/', logout_view, name='logout'),
     path('api/cars/sell/', create_car, name='car-create'),
     path('api/cars/buy/', get_all_cars, name='get-all-cars'),
+    path('api/cars/<int:car_id>/', car_detail, name='car_detail'),
 ]

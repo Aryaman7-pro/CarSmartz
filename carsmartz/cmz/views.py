@@ -1,6 +1,7 @@
 import pickle
 import pandas as pd
 import numpy as np
+from cmz.models import Car
 import plotly.graph_objects as go
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.response import Response
@@ -26,12 +27,13 @@ from django.contrib.auth import logout
 User = get_user_model()
 # Load the model and data
 model = pickle.load(open('C:\\Users\\aryaman.kanwar\\CarSmartz\\StackedModel.pkl', 'rb'))
+car_pipeline = pickle.load(open('C:\\Users\\aryaman.kanwar\\CarSmartz\\car_recommendation_model.pkl', 'rb'))
 car = pd.read_csv('C:\\Users\\aryaman.kanwar\\CarSmartz\\Cleaned_Data.csv')
-
+df = pd.read_csv('C:\\Users\\aryaman.kanwar\\CarSmartz\\Recommendation_Data.csv')
 logger = logging.getLogger(__name__)
 
 class SmallPageNumberPagination(PageNumberPagination):
-    page_size = 3  # Set default page size to 3
+    page_size = 12  # Set default page size to 3
     page_size_query_param = 'page_size'
     max_page_size = 10
 
@@ -78,22 +80,37 @@ def get_valid_access_token_user(request):
 
 @api_view(['GET'])
 def index(request):
+    # try:
+    #     access_token = get_valid_access_token_user(request)
+        
+    #     if access_token != request.COOKIES.get('access'):
+    #         response = Response()
+    #         response.set_cookie(
+    #             'access', access_token,
+    #             httponly=True,
+    #             secure=True,
+    #             samesite='Strict'
+    #         )
+    #     else:
+    #         response = Response()
+
+    # except AuthenticationFailed:
+    #     return Response({'error': "Unauthorized access. Token is invalid or expired."}, status=401)
     try:
         access_token = get_valid_access_token_user(request)
-        
+        response = Response({"message": "Your view's response data"})
+
         if access_token != request.COOKIES.get('access'):
-            response = Response()
             response.set_cookie(
                 'access', access_token,
                 httponly=True,
                 secure=True,
-                samesite='Strict'
+                samesite='Strict',
+                max_age=['ACCESS_TOKEN_LIFETIME'].seconds  
             )
-        else:
-            response = Response()
-
     except AuthenticationFailed:
         return Response({'error': "Unauthorized access. Token is invalid or expired."}, status=401)
+    
     companies = sorted(car['company'].unique())
     car_models = sorted(car['name'].unique())
     years = sorted(car['year'].unique(), reverse=True)
@@ -121,18 +138,16 @@ def index(request):
 def predict(request):
     try:
         access_token = get_valid_access_token_user(request)
-        
+        response = Response({"message": "Your view's response data"})
+
         if access_token != request.COOKIES.get('access'):
-            response = Response()
             response.set_cookie(
                 'access', access_token,
                 httponly=True,
                 secure=True,
-                samesite='Strict'
+                samesite='Strict',
+                max_age=['ACCESS_TOKEN_LIFETIME'].seconds  
             )
-        else:
-            response = Response()
-
     except AuthenticationFailed:
         return Response({'error': "Unauthorized access. Token is invalid or expired."}, status=401)
     serializer = CarDataSerializer(data=request.data)
@@ -164,18 +179,16 @@ def predict(request):
 def depreciation_graph(request):
     try:
         access_token = get_valid_access_token_user(request)
-        
+        response = Response({"message": "Your view's response data"})
+
         if access_token != request.COOKIES.get('access'):
-            response = Response()
             response.set_cookie(
                 'access', access_token,
                 httponly=True,
                 secure=True,
-                samesite='Strict'
+                samesite='Strict',
+                max_age=['ACCESS_TOKEN_LIFETIME'].seconds  
             )
-        else:
-            response = Response()
-
     except AuthenticationFailed:
         return Response({'error': "Unauthorized access. Token is invalid or expired."}, status=401)
     if request.method == 'GET':
@@ -334,18 +347,16 @@ def logout_view(request):
 def create_car(request):
     try:
         access_token = get_valid_access_token_user(request)
-        
+        response = Response({"message": "Your view's response data"})
+
         if access_token != request.COOKIES.get('access'):
-            response = Response()
             response.set_cookie(
                 'access', access_token,
                 httponly=True,
                 secure=True,
-                samesite='Strict'
+                samesite='Strict',
+                max_age=['ACCESS_TOKEN_LIFETIME'].seconds  
             )
-        else:
-            response = Response()
-
     except AuthenticationFailed:
         return Response({'error': "Unauthorized access. Token is invalid or expired."}, status=401)
     serializer = CarSerializer(data=request.data)
@@ -361,20 +372,20 @@ def create_car(request):
 
 @api_view(['GET'])
 def get_all_cars(request):
-    try:
-        access_token = get_valid_access_token_user(request)
+        try:
+            access_token = get_valid_access_token_user(request)
+            response = Response({"message": "Your view's response data"})
 
-        if access_token != request.COOKIES.get('access'):
-            response = Response()
-            response.set_cookie(
+            if access_token != request.COOKIES.get('access'):
+               response.set_cookie(
                 'access', access_token,
                 httponly=True,
                 secure=True,
-                samesite='Strict'
+                samesite='Strict',
+                max_age=['ACCESS_TOKEN_LIFETIME'].seconds  
             )
-        else:
-            response = Response()
-
+        except AuthenticationFailed:
+              return Response({'error': "Unauthorized access. Token is invalid or expired."}, status=401)
         cars = Car.objects.all()  # Fetch all car records
 
         # Apply pagination
@@ -391,5 +402,107 @@ def get_all_cars(request):
             'page_count': paginator.page.paginator.num_pages   # Pass the total number of cars for pagination info
         })
 
-    except AuthenticationFailed:
-        return Response({'error': "Unauthorized access. Token is invalid or expired."}, status=401)
+    
+
+
+
+
+# Updated recommend_similar_cars function
+def recommend_similar_cars(car_model):
+    # Get all cars from the database
+    cars = Car.objects.all()
+
+    # Check if the QuerySet is empty
+    if not cars.exists():
+        print("No cars found in the database.")
+        return pd.DataFrame()  # Return an empty DataFrame if no cars found
+
+    # Create a DataFrame from the QuerySet
+    df_cars = pd.DataFrame(list(cars.values()))
+
+    # Ensure the DataFrame is not empty
+    if df_cars.empty:
+        print("No cars found in the database.")
+        return pd.DataFrame()  # Return an empty DataFrame if no cars found
+
+
+    # Check if the car model exists in the DataFrame
+    if car_model not in df_cars['car_model'].values:
+        print(f"Car model '{car_model}' not found in the dataset.")
+        return pd.DataFrame()  # Return an empty DataFrame if car model is not found
+
+    # Get the index of the specified car model
+    car_index = df_cars[df_cars['car_model'] == car_model].index[0]
+
+    # Transform the features of the selected car using the preprocessor
+    car_features = car_pipeline.named_steps['preprocessor'].transform(df_cars.iloc[[car_index]])
+
+    # Get similar cars based on the selected car's features
+    distances, indices = car_pipeline.named_steps['knn'].kneighbors(car_features)
+
+
+    # Ensure all indices are valid
+    valid_indices = [i for i in indices[0] if i < df_cars.shape[0]]
+
+    # Check if any valid indices were found
+    if not valid_indices:
+        print(f"No similar cars found for car model '{car_model}'.")
+        return pd.DataFrame()  # Return an empty DataFrame if no similar cars are found
+
+    # Get the similar cars and reset the index for display
+    similar_cars = df_cars.iloc[valid_indices].reset_index(drop=True)
+
+    return similar_cars
+
+
+# Updated car_detail view
+@api_view(['GET'])
+def car_detail(request, car_id):
+        try:
+           access_token = get_valid_access_token_user(request)
+           response = Response({"message": "Your view's response data"})
+
+           if access_token != request.COOKIES.get('access'):
+                  response.set_cookie(
+                'access', access_token,
+                httponly=True,
+                secure=True,
+                samesite='Strict',
+                max_age=['ACCESS_TOKEN_LIFETIME'].seconds  
+            )
+        except AuthenticationFailed:
+                return Response({'error': "Unauthorized access. Token is invalid or expired."}, status=401)
+        except Car.DoesNotExist:
+           return Response({'error': "Car not found"}, status=404)
+
+        # Retrieve the specific car by ID
+        car = Car.objects.get(id=car_id)
+
+        # Serialize the car object
+        serializer = CarSerializer(car)
+        car_model = car.car_model
+
+        # Get recommendations based on the car model
+        recommendations = recommend_similar_cars(car_model)
+
+        # Check if the recommendations DataFrame is not empty
+        if recommendations is not None and not recommendations.empty:
+            # Convert to dictionary and remove the current car from recommendations
+            recommendations_dict = recommendations.to_dict(orient='records')
+            recommendations = [rec for rec in recommendations_dict if rec['id'] != car_id]  # Remove the current car
+        else:
+            recommendations = None  # Handle empty case as per your needs
+
+        # Render the car details in the HTML template
+        return render(request, 'car_detail.html', {
+            'car': serializer.data,
+            'recommendations': recommendations  # Pass recommendations to the template
+        })
+
+
+
+
+
+
+
+

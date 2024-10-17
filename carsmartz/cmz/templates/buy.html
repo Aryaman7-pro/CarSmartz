@@ -64,6 +64,9 @@
             border-radius: 8px;
             padding: 20px;
             transition: box-shadow 0.3s, transform 0.3s;
+            display: block;
+            text-decoration: none;
+            color: inherit;
         }
 
         .car-item:hover {
@@ -126,6 +129,34 @@
             color: #666;
         }
 
+        .pagination-input {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .pagination-input input {
+            width: 60px;
+            padding: 8px;
+            border: 1px solid var(--card-border);
+            border-radius: 5px;
+        }
+
+        .sort-btn {
+            padding: 10px 15px;
+            margin-bottom: 20px;
+            background-color: var(--secondary-color);
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .sort-btn:hover {
+            background-color: #27ae60;
+        }
+
         @media (max-width: 600px) {
             .car-grid {
                 grid-template-columns: 1fr;
@@ -145,18 +176,21 @@
 <body>
     <div class="container">
         <header>
-            <h1>Available Cars for Sale</h1>
+            <h1>CarSmartz - Available Cars for Sale</h1>
             <h5>Browse through our list of cars and make a choice!</h5>
         </header>
 
+        <!-- Sort button for sorting car prices -->
+        <button id="sortButton" class="sort-btn">Sort by Price (Low to High)</button>
+
         <div class="car-grid" id="car-list">
             {% for car in cars %}
-                <div class="car-item">
+                <a href="{% url 'car_detail' car.id %}" class="car-item" data-price="{{ car.predicted_price }}">
                     <div class="car-title">{{ car.car_model }} ({{ car.year }})</div>
                     <div class="car-details">Fuel Type: {{ car.fuel_type }}</div>
                     <div class="car-details">Kilometers Driven: {{ car.kilo_driven }}</div>
                     <div class="car-details">Predicted Price: ₹{{ car.predicted_price|floatformat:2 }}</div>
-                </div>
+                </a>
             {% empty %}
                 <p>No cars available at the moment.</p>
             {% endfor %}
@@ -172,21 +206,61 @@
             {% endif %}
         </div>
 
+        <div class="pagination-input">
+            <input type="number" id="pageInput" min="1" max="{{ page.paginator.num_pages }}" placeholder="Enter page number">
+            <button id="goToPageButton" class="btn">Go</button>
+        </div>
+
         <div class="button-container">
             <button id="predictPriceButton" class="btn">Predict Car Price</button>
-            <button id="buyCarButton" class="btn">Buy a Car</button>
             <button onclick="window.location.href='/cmz/depreciation-graph/'" class="btn">Back to Home</button>
             <button id="logoutButton" class="btn">Logout</button>
         </div>
     </div>
 
     <script>
+        let sortedState = 0; // 0 = unsorted, 1 = low to high, 2 = high to low
+        const sortButton = document.getElementById('sortButton');
+        const carList = document.getElementById('car-list');
+        const originalCars = [...carList.children]; // Clone original car list
+
+        // Function to sort cars by price
+        function sortCars(order) {
+            const sortedCars = [...carList.children].sort((a, b) => {
+                const priceA = parseFloat(a.getAttribute('data-price'));
+                const priceB = parseFloat(b.getAttribute('data-price'));
+                return order === 'low-to-high' ? priceA - priceB : priceB - priceA;
+            });
+
+            carList.innerHTML = ''; // Clear the list
+            sortedCars.forEach(car => carList.appendChild(car)); // Append sorted cars
+        }
+
+        // Event listener for sort button
+        sortButton.addEventListener('click', function() {
+            if (sortedState === 0) {
+                sortCars('low-to-high');
+                sortButton.textContent = "Sort by Price (High to Low)";
+                sortedState = 1;
+            } else if (sortedState === 1) {
+                sortCars('high-to-low');
+                sortButton.textContent = "Sort by Price (Normal)";
+                sortedState = 2;
+            } else {
+                carList.innerHTML = ''; // Clear the list
+                originalCars.forEach(car => carList.appendChild(car)); // Restore original order
+                sortButton.textContent = "Sort by Price (Low to High)";
+                sortedState = 0;
+            }
+        });
+
         document.getElementById('predictPriceButton').addEventListener('click', function() {
             window.location.href = '/cmz/api';
         });
 
-        document.getElementById('buyCarButton').addEventListener('click', function() {
-            window.location.href = '/cmz/api/cars/buy/';
+        document.getElementById('goToPageButton').addEventListener('click', function() {
+            const pageNumber = document.getElementById('pageInput').value;
+            window.location.href = `?page=${pageNumber}`;
         });
 
         document.getElementById('logoutButton').addEventListener('click', function() {

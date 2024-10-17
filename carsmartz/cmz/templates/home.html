@@ -175,6 +175,7 @@
 
         <div class="button-container">
             <button id="predictPriceButton" class="btn btn-secondary">Sell Your Car</button>
+            <button id="uploadPhotoButton" class="btn btn-secondary">Upload a Photo</button> <!-- New Button -->
             <button id="buyCarButton" class="btn btn-secondary">Buy a Car</button>
         </div>
     </main>
@@ -191,6 +192,7 @@
             const loadingMessage = document.getElementById('loadingMessage');
             const predictPriceButton = document.getElementById('predictPriceButton');
             const buyCarButton = document.getElementById('buyCarButton');
+            const uploadPhotoButton = document.getElementById('uploadPhotoButton'); // New Button
             const logoutButton = document.getElementById('logoutButton');
 
             form.addEventListener('submit', async (e) => {
@@ -235,6 +237,10 @@
 
             buyCarButton.addEventListener('click', () => {
                 window.location.href = '/cmz/api/cars/buy/';
+            });
+
+            uploadPhotoButton.addEventListener('click', () => {
+                // Functionality for uploading a photo will go here
             });
 
             logoutButton.addEventListener('click', () => {
