@@ -473,7 +473,7 @@ def car_detail(request, car_id):
         except AuthenticationFailed:
                 return Response({'error': "Unauthorized access. Token is invalid or expired."}, status=401)
         except Car.DoesNotExist:
-           return Response({'error': "Car not found"}, status=404)
+         return Response({'error': "Car not found"}, status=404)
 
         # Retrieve the specific car by ID
         car = Car.objects.get(id=car_id)
