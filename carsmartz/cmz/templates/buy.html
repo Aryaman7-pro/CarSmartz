@@ -52,6 +52,32 @@
             font-size: 1.1rem;
         }
 
+        .search-bar {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .search-bar input[type="text"] {
+            padding: 10px;
+            width: 300px;
+            border: 1px solid var(--card-border);
+            border-radius: 5px;
+        }
+
+        .search-bar button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            background-color: var(--primary-color);
+            color: #fff;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .search-bar button:hover {
+            background-color: #2980b9;
+        }
+
         .car-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -179,6 +205,14 @@
             <h1>CarSmartz - Available Cars for Sale</h1>
             <h5>Browse through our list of cars and make a choice!</h5>
         </header>
+
+        <!-- Search Bar -->
+        <div class="search-bar">
+            <form action="{% url 'search_cars' %}" method="GET">
+                <input type="text" name="q" placeholder="Search for cars..." required>
+                <button type="submit">Search</button>
+            </form>
+        </div>
 
         <!-- Sort button for sorting car prices -->
         <button id="sortButton" class="sort-btn">Sort by Price (Low to High)</button>

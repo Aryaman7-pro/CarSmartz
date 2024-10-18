@@ -24,6 +24,7 @@ from django.conf import settings
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.contrib.auth import get_user_model
 from django.contrib.auth import logout
+from fuzzywuzzy import process
 User = get_user_model()
 # Load the model and data
 model = pickle.load(open('C:\\Users\\aryaman.kanwar\\CarSmartz\\StackedModel.pkl', 'rb'))
@@ -502,7 +503,23 @@ def car_detail(request, car_id):
 
 
 
+@api_view(['GET'])
+def search_cars(request):
+    query = request.GET.get('q', '').strip()
+    results = []
 
+    if query:
+        # Fetch both car model, ID, and other details to display
+        cars = Car.objects.values('id', 'car_model', 'year', 'fuel_type', 'kilo_driven', 'predicted_price')  # Fetch relevant fields
+        
+        # Extract car model names for fuzzy matching
+        car_names = {car['car_model']: car['id'] for car in cars}  # Map car model to ID
+        
+        # Find the best matches using FuzzyWuzzy
+        best_matches = process.extract(query, car_names.keys(), limit=5)
+        
+        # Create results with car object but no similarity score
+        results = [Car.objects.get(id=car_names[match[0]]) for match in best_matches if match[1] >= 50]
 
-
+    return render(request, 'search_results.html', {'results': results, 'query': query})
 
